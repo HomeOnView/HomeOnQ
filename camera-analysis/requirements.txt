@@ -1,0 +1,13 @@
+# 핵심(설치 없이도 규칙 기반 분석·리포트는 동작)
+httpx>=0.27,<1
+python-dotenv>=1.0,<2
+numpy>=1.26,<3
+
+# 선택: 실제 카메라 프레임/영상에서 관절 추출
+#   pip install mediapipe opencv-python-headless
+# MediaPipe 1.x는 .task 모델 파일이 필요하다(scripts/download_models.py).
+mediapipe>=0.10,<2
+opencv-python-headless>=4.9,<6
+
+# 선택: Gemini 문장 생성(없으면 규칙 기반으로 자동 폴백, SDK 없이 REST 사용)
+# 추가 설치 불필요

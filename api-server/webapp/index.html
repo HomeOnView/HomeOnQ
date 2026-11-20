@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+<meta name="theme-color" content="#0B1F4B" />
+<meta name="description" content="HOMEONQ 보호자 안심 리포트 - 시연용 모바일 웹앱" />
+<title>HOMEONQ · 보호자 안심 리포트</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='24' fill='%230B1F4B'/><path d='M28 58c0-14 10-24 22-24s22 10 22 24' stroke='%23E3A62F' stroke-width='8' fill='none' stroke-linecap='round'/></svg>" />
+<link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+<div class="stage">
+  <div class="phone" id="phone">
+    <div class="statusbar" aria-hidden="true">
+      <span id="clock">--:--</span>
+      <span class="statusbar-icons"><span class="dot-signal"></span><span class="wifi"></span><span class="battery"></span></span>
+    </div>
+
+    <header class="appbar" id="appbar">
+      <div class="appbar-brand">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="20" height="20"><path d="M4 15c0-4.4 3.6-8 8-8s8 3.6 8 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="17.5" r="1.6" fill="currentColor"/></svg>
+        </span>
+        <div class="brand-text">
+          <strong>홈온큐</strong>
+          <span>HOMEONQ · 보호자 안심 리포트</span>
+        </div>
+      </div>
+      <div class="appbar-actions">
+        <span class="conn-badge" id="conn-badge" title="서버 연결 상태"><i></i><span>확인 중</span></span>
+        <button class="icon-btn" id="btn-test-fall" title="낙상 알림 테스트" aria-label="낙상 알림 테스트">낙상 테스트</button>
+        <button class="icon-btn ghost" id="btn-refresh" title="새로고침" aria-label="새로고침">
+          <svg viewBox="0 0 24 24" width="18" height="18"><path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <main id="main" class="main">
+      <!-- 로그인 -->
+      <section class="screen" id="screen-login">
+        <div class="login-hero">
+          <div class="hero-orb" aria-hidden="true"></div>
+          <p class="brand-en">HOMEONQ</p>
+          <h1>부모님의 하루를<br/>조용히 지켜보는 안심 리포트</h1>
+          <p>카메라가 관절 움직임을 분석해 낙상·장시간 무활동·배회를 살피고,<br/>보호자에게 따뜻한 말로 하루를 전합니다.</p>
+          <ul class="hero-points">
+            <li><span>01</span> 낙상이 의심되면 즉시 알림</li>
+            <li><span>02</span> 매일 아침 안심 점수와 리포트</li>
+            <li><span>03</span> 앱에서 어르신 정보 수정</li>
+          </ul>
+        </div>
+        <form class="login-card" id="login-form" autocomplete="on">
+          <h2>보호자 로그인</h2>
+          <label class="field"><span>이메일</span><input id="login-email" type="email" name="email" autocomplete="username" required /></label>
+          <label class="field"><span>비밀번호</span><input id="login-password" type="password" name="password" autocomplete="current-password" required /></label>
+          <button class="btn primary block" id="login-submit" type="submit">로그인</button>
+          <button class="btn ghost block" id="login-demo" type="button">데모 계정으로 바로 시작</button>
+          <p class="login-hint" id="login-hint">시연용 데모 계정으로 로그인됩니다.</p>
+        </form>
+      </section>
+
+      <!-- 홈 -->
+      <section class="screen hidden" id="screen-home">
+        <div class="today-line">
+          <h2 id="home-greeting">오늘의 안심 리포트</h2>
+          <span id="home-date">-</span>
+        </div>
+
+        <article class="card profile-card" id="profile-card"></article>
+
+        <article class="card score-card" id="score-card"></article>
+
+        <article class="card report-card" id="report-card"></article>
+
+        <article class="card summary-card" id="summary-card"></article>
+
+        <article class="card alert-card hidden" id="home-alert-card"></article>
+
+        <div class="quick-actions">
+          <a class="btn danger block" id="btn-sos" href="tel:01000000000">
+            <svg viewBox="0 0 24 24" width="18" height="18"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.24c1.1.37 2.3.57 3.6.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.2.2 2.5.6 3.6a1 1 0 0 1-.25 1z" fill="currentColor"/></svg>
+            SOS 안심전화
+          </a>
+          <button class="btn navy block" id="btn-live">
+            <svg viewBox="0 0 24 24" width="18" height="18"><path d="M4 8a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zm12 2 4-2.5v9L16 14z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+            실시간 영상
+          </button>
+        </div>
+        <p class="fineprint">홈온큐는 의료 진단을 대신하지 않습니다. 리포트는 관절 좌표 분석 기반 참고 자료입니다.</p>
+      </section>
+
+      <!-- 이벤트 -->
+      <section class="screen hidden" id="screen-events">
+        <div class="section-head">
+          <h2>최근 이벤트</h2>
+          <div class="segmented" id="event-filter">
+            <button data-kind="all" class="active">전체</button>
+            <button data-kind="fall">낙상</button>
+            <button data-kind="behavior">행동</button>
+          </div>
+        </div>
+        <div id="event-list" class="event-list"></div>
+      </section>
+
+      <!-- 시뮬레이션 -->
+      <section class="screen hidden" id="screen-sim">
+        <div class="section-head">
+          <h2>자세·동작 분석 테스트</h2>
+          <button class="btn tiny ghost" id="btn-demo-reset">데모 초기화</button>
+        </div>
+        <p class="section-desc">샘플 관절좌표를 <b>실제 분석 파이프라인</b>으로 처리한 뒤, 기기용 텔레메트리 API로 전송하고 DB에 저장합니다. 끝나면 리포트와 알림이 바로 갱신됩니다.</p>
+        <div class="scenario-grid" id="scenario-grid"></div>
+        <article class="card sim-result hidden" id="sim-result"></article>
+        <div class="sim-note">
+          <strong>시연 흐름</strong>
+          <ol>
+            <li>샘플 관절좌표(33관절 시퀀스) 로드</li>
+            <li>규칙 기반 낙상·무활동·배회 감지</li>
+            <li><code>POST /api/v1/device/*</code> 전송 → SQLite 저장</li>
+            <li>보호자 리포트·낙상 알림 화면 갱신</li>
+          </ol>
+        </div>
+      </section>
+
+      <!-- 설정 -->
+      <section class="screen hidden" id="screen-settings">
+        <div class="section-head"><h2>설정</h2></div>
+        <article class="card" id="settings-account"></article>
+        <article class="card" id="settings-devices"></article>
+        <article class="card" id="settings-server"></article>
+        <button class="btn ghost block" id="btn-logout">로그아웃</button>
+        <p class="fineprint">시연용 웹앱 · HOMEONQ · <span id="app-version">v0.3.0</span></p>
+      </section>
+    </main>
+
+    <nav class="tabbar hidden" id="tabbar">
+      <button data-view="home" class="active">
+        <svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-4.5v-6h-5v6H5a1 1 0 0 1-1-1z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/></svg>
+        <span>리포트</span>
+      </button>
+      <button data-view="events">
+        <svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 3 3 20h18z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="M12 9v5M12 17h.01" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
+        <span>이벤트</span>
+      </button>
+      <button data-view="sim">
+        <svg viewBox="0 0 24 24" width="22" height="22"><path d="M5 19V9m7 10V5m7 14v-7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+        <span>분석 테스트</span>
+      </button>
+      <button data-view="settings">
+        <svg viewBox="0 0 24 24" width="22" height="22"><circle cx="12" cy="12" r="3.2" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.4-2.3.9a7 7 0 0 0-2-1.2L14.3 3h-4.6l-.3 2.6a7 7 0 0 0-2 1.2l-2.3-.9-2 3.4 2 1.5A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.5 2 3.4 2.3-.9a7 7 0 0 0 2 1.2l.3 2.6h4.6l.3-2.6a7 7 0 0 0 2-1.2l2.3.9 2-3.4-2-1.5c.1-.4.1-.8.1-1.2z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+        <span>설정</span>
+      </button>
+    </nav>
+
+    <div class="offline-banner hidden" id="offline-banner">서버에 연결되지 않아 <b>데모 데이터</b>를 보여주고 있습니다.</div>
+  </div>
+</div>
+
+<div class="modal-root" id="modal-root" aria-live="polite"></div>
+<div class="toast" id="toast" role="status"></div>
+
+<script src="./app.js"></script>
+</body>
+</html>

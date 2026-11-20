@@ -1,0 +1,35 @@
+# HOMEONQ 통합 시연앱 — Render 무료 웹 서비스 배포 정의
+#
+# 사용법: Render Dashboard → New → Blueprint → 저장소 HomeOnView/HomeOnQ 선택
+#         → 브랜치 app-demo 선택 → Apply. 아래 설정이 그대로 적용된다.
+#
+# 이 서비스는 웹앱(/)·API(/api/v1)·자세분석 시뮬레이션(/demo/*)을 한 프로세스에서 서빙한다.
+services:
+  - type: web
+    name: HOMEONQ
+    runtime: python
+    plan: free                 # 무료 인스턴스: 0.1 CPU · 512MB RAM · 15분 무접속 시 슬립
+    region: singapore          # 한국에서 가장 가까운 리전
+    branch: app-demo           # 기존 main(index.html 소개 페이지)은 건드리지 않는다
+    buildCommand: cd api-server && pip install -r requirements.txt
+    # 무료 플랜은 preDeployCommand를 지원하지 않으므로, 기동 직전에 마이그레이션+데모 시드를
+    # 멱등하게 실행한다. 파일시스템이 초기화된 뒤에도 항상 같은 데모 상태로 뜬다.
+    startCommand: cd api-server && python scripts/dev_bootstrap.py && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/v1/health
+    autoDeployTrigger: commit
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      # demo: production이 아니므로 /api/v1/demo/* 와 웹앱 '분석 테스트' 탭이 동작한다.
+      - key: APP_ENV
+        value: demo
+      - key: DATABASE_URL
+        value: sqlite:///./homeonq_dev.db   # 무료 플랜은 휘발성 디스크 → 재시작 시 자동 재시드
+      - key: AUTO_CREATE_SCHEMA
+        value: "true"
+      - key: JWT_SECRET
+        generateValue: true                 # Render가 256bit 난수로 생성
+      - key: CORS_ORIGINS
+        value: '["*"]'                      # 시연용: 같은 오리진(웹앱) 외 Expo 앱에서도 접근 허용
+      - key: ACCESS_TOKEN_MINUTES
+        value: "60"                         # 시연 중 로그인이 풀리지 않도록 넉넉히

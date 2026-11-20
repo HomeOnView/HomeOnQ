@@ -1,0 +1,36 @@
+{
+  "expo": {
+    "name": "홈온큐 보호자",
+    "slug": "homeonq-guardian",
+    "version": "0.3.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "scheme": "homeonq",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0B1F4B"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "kr.homeonq.guardian"
+    },
+    "android": {
+      "package": "kr.homeonq.guardian",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0B1F4B"
+      },
+      "edgeToEdgeEnabled": true
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "extra": {
+      "apiUrl": "http://localhost:8000"
+    }
+  }
+}

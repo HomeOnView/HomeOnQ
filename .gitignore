@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# 로컬 DB (데모 시드는 기동 시 자동 생성)
+*.db
+*.db-wal
+*.db-shm
+*.db-journal
+local_events.db
+
+# 환경변수 / 비밀값 — 예시 파일(.env.example)만 커밋한다
+.env
+.env.*
+!.env.example
+!**/.env.example
+
+# 로그
+*.log
+
+# Node / Expo
+node_modules/
+.expo/
+dist/
+web-build/
+npm-debug.*
+
+# 산출물
+*.zip
+.DS_Store
+
+# 에디터
+.idea/
+.vscode/
