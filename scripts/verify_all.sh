@@ -17,13 +17,16 @@ echo "== 2) 파이프라인 테스트"
 echo "== 3) 엔드투엔드(분석→HTTP→DB→조회)"
 "$PY" scripts/e2e_demo.py || FAIL=1
 
+echo "== 4) Render 무료 배포 기동 점검(APP_ENV=demo)"
+"$PY" scripts/render_smoke.py || FAIL=1
+
 if command -v node >/dev/null 2>&1; then
-  echo "== 4) 웹앱 런타임 스모크(jsdom 필요: npm i jsdom)"
+  echo "== 5) 웹앱 런타임 스모크(jsdom 필요: npm i jsdom)"
   node scripts/webapp_smoke.test.mjs || FAIL=1
-  echo "== 5) Expo 정적 검사"
+  echo "== 6) Expo 정적 검사"
   node scripts/mobile_app_check.mjs || FAIL=1
 else
-  echo "!! node가 없어 4)5)는 건너뜁니다 (웹앱/Expo 검증)"
+  echo "!! node가 없어 5)6)는 건너뜁니다 (웹앱/Expo 검증)"
 fi
 
 if [ "$FAIL" -eq 0 ]; then echo "✅ 전체 검증 통과"; else echo "❌ 일부 검증 실패"; fi

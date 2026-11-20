@@ -112,7 +112,8 @@ homeonq-app/
 │   ├── App.js                  세션·탭·폴링·알림 상태
 │   └── src/{api,screens,components,theme,config}
 ├── docs/                       API 명세 · 아키텍처 · 파이프라인 · 시연 가이드
-└── scripts/                    run_local.sh · e2e_demo.py · verify_all.sh · 검증 스크립트
+├── render.yaml                 Render 무료 배포 정의(Blueprint)
+└── scripts/                    run_local.sh · e2e_demo.py · render_smoke.py · verify_all.sh · 검증 스크립트
 ```
 
 ---
@@ -204,9 +205,10 @@ EXPO_PUBLIC_API_URL=http://localhost:8000 npm start   # 웹: w, Expo Go: QR
 
 | 항목 | 명령 | 결과 |
 |---|---|---|
-| 백엔드 API/모델 | `cd api-server && pytest` | **20 passed** |
+| 백엔드 API/모델 | `cd api-server && pytest` | **23 passed** |
 | 파이프라인 | `cd camera-analysis && pytest` | **33 passed** |
 | E2E (분석→HTTP→DB→조회) | `python scripts/e2e_demo.py` | **20/20 통과** |
+| Render 배포 점검 (`APP_ENV=demo`) | `python scripts/render_smoke.py` | **15/15 통과** |
 | 웹앱 런타임(jsdom) | `node scripts/webapp_smoke.test.mjs` | **20/20 통과** |
 | Expo 정적 검증 | `node scripts/mobile_app_check.mjs` | **8/8 통과** |
 | 마이그레이션 | `alembic upgrade head` / `downgrade -1` / `upgrade head` | SQLite에서 정상 |
@@ -214,6 +216,8 @@ EXPO_PUBLIC_API_URL=http://localhost:8000 npm start   # 웹: w, Expo Go: QR
 전체를 한 번에: `./scripts/verify_all.sh`
 
 E2E 스크립트는 임시 SQLite에 마이그레이션·시드를 적용하고 **실제 uvicorn 서버를 띄워** 파이프라인이 HTTP로 이벤트를 전송한 뒤, 보호자 API 응답과 DB 행 수를 확인하고 서버를 종료합니다. (상시 데몬을 남기지 않습니다.)
+
+`scripts/render_smoke.py` 는 render.yaml의 시작 명령을 그대로 재현합니다: 부트스트랩 2회(슬립/재배포 멱등성) → `uvicorn --host 0.0.0.0 --port $PORT` → 웹앱·헬스·`/demo/config`·로그인·`/demo/simulate`(낙상)·알림·리포트·`/demo/reset` 확인.
 
 ---
 
@@ -237,6 +241,9 @@ E2E 스크립트는 임시 SQLite에 마이그레이션·시드를 적용하고 
 1. <https://render.com> 가입 → GitHub 계정 연결 (GitHub App 설치에서 `HomeOnView/HomeOnQ` 접근 허용)
 2. Dashboard → **New → Blueprint** → 저장소 `HomeOnView/HomeOnQ`, 브랜치 **`app-demo`** 선택
 3. **Apply** → 첫 배포 3~5분 → `https://homeonq.onrender.com` (이미 사용 중인 이름이면 뒤에 임의 문자열이 붙습니다)
+
+> 저장소 이름을 `HOMEONQ`로 바꾸면 위 경로도 `HomeOnView/HOMEONQ` 가 됩니다(GitHub이 이전 리포 URL을 리다이렉트). 변경은 GitHub → Settings → Repository name 에서 직접 해야 합니다.
+> GitHub Pages(`https://homeonview.github.io/HomeOnQ/`, `main`의 `index.html`)를 함께 쓰고 있다면, 이름 변경 후 Pages 주소가 `.../HOMEONQ/` 로 바뀌므로 공유 링크를 새 주소로 바꿔 주세요.
 
 > Render가 서비스 이름에 소문자만 허용한다고 안내하면 `render.yaml`의 `name`을 `homeonq`로 바꿔 다시 Apply 하세요. 화면 표기는 HOMEONQ 그대로입니다.
 
