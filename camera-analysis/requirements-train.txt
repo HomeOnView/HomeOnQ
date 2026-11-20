@@ -21,6 +21,9 @@ opencv-python-headless>=4.9,<6
 # 학습·테스트 도구
 pytest>=8,<10
 
+# 노트북 검증/재생성(scripts/build_training_notebook.py)
+nbformat>=5,<6
+
 # 선택: 노트북 그래프/표
 # matplotlib>=3.8
 # 선택: PyTorch 1D-CNN 같은 시계열 모델로 확장할 때(현재 기본 백엔드는 NumPy MLP)
