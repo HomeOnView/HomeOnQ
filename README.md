@@ -95,7 +95,9 @@ homeonq-app/
 │   └── tests/                  20개 API/모델 테스트
 ├── camera-analysis/            자세·동작 분석 파이프라인 (Python)
 │   ├── onview/
-│   │   ├── detector.py         낙상·장시간 무활동·배회 규칙
+│   │   ├── detector.py         낙상·장시간 무활동·배회 규칙 + AI 모델 판정 병합
+│   │   ├── features.py         33관절 정규화·시계열 특징(학습·추론 공용)
+│   │   ├── inference.py        플러그인형 ONNX 분류기 + 자동 폴백
 │   │   ├── pose_analyzer.py    MediaPipe Pose(0.10 solutions / 1.x Tasks) + 자동 폴백
 │   │   ├── video_input.py      RTSP/웹캠 스레드 + 지수 백오프 재연결
 │   │   ├── health_monitor.py   HEALTHY/DEGRADED/CAMERA_OFFLINE/ANALYSIS_FAILED/REPORTING_FAILED
@@ -104,10 +106,17 @@ homeonq-app/
 │   │   ├── report_generator.py Gemini 우선 · 규칙 기반 자동 폴백
 │   │   ├── pipeline.py         분석→페이로드→전송
 │   │   ├── simulation.py       웹앱 시뮬레이션용 진입점
-│   │   └── cli.py              analyze / demo / mediapipe-check / serve
+│   │   └── cli.py              analyze / demo / mediapipe-check / model-check / serve
+│   ├── training/               AI 허브 학습 파이프라인 (requirements-train.txt)
+│   │   ├── extract_landmarks.py  영상·AI 허브 라벨 → 33관절(.npz)+매니페스트
+│   │   ├── train_action_model.py 학습·교차검증·평가·ONNX 내보내기
+│   │   ├── dataset.py · labels.py · augment.py · evaluate.py · numpy_model.py
+│   │   ├── HOMEONQ_AIHub_Training.ipynb   Colab 학습 노트북
+│   │   └── __init__.py
 │   ├── samples/                정상 보행 · 낙상 · 무활동 · 배회 관절좌표(33관절)
-│   ├── models/                 pose_landmarker_lite.task (5.8MB)
-│   └── tests/                  33개 파이프라인 테스트
+│   ├── models/                 pose_landmarker_lite.task (5.8MB) · action_classifier.onnx(학습 후)
+│   ├── docs/ai-training.md     데이터 준비 → 학습 → ONNX → 파이프라인 연결 실행 가이드
+│   └── tests/                  43개 기본 통과(학습 의존성 설치 시 86개) 테스트
 ├── mobile-app/                 Expo SDK 54 보호자 앱 (talking-blue-cookies 발전형)
 │   ├── App.js                  세션·탭·폴링·알림 상태
 │   └── src/{api,screens,components,theme,config}
@@ -158,6 +167,35 @@ Base path `/api/v1`. 기기 API는 `X-Device-Token`, 보호자 API는 `Authoriza
 
 좌표는 MediaPipe Pose의 **정규화 이미지 좌표**이며 미터 단위가 아닙니다. 카메라 설치 높이·화각에 따라 현장 보정이 필요합니다(`docs/pipeline.md`).
 
+### AI 모델(ONNX) 연결 — AI 허브 데이터 학습 결과를 그대로 꽂기
+
+1단계(영상→33관절)는 MediaPipe 공개 모델을 그대로 쓰고, **2단계 판단기만** 우리 데이터로 학습합니다.
+학습된 파일 두 개(`action_classifier.onnx` + `.json`)를 `camera-analysis/models/` 에 넣으면
+서버·웹앱 코드를 건드리지 않고 판정이 AI 모델로 바뀝니다. **파일이 없거나 onnxruntime이 없으면
+기존 규칙 기반으로 자동 폴백**하므로 시연이 깨지지 않습니다.
+
+```bash
+cd camera-analysis
+pip install -r requirements-train.txt        # 학습(Colab도 가능)
+python -m training.extract_landmarks --samples --out data/samples          # 뼈대 검증(영상 불필요)
+python -m training.train_action_model --demo --out models/action_classifier.onnx
+python -m onview.cli model-check                                         # ✅ ONNX AI 모델 사용 중
+python -m onview.cli analyze --scenario fall                             # 규칙 + AI 교차 판정
+```
+
+실제 AI 허브 데이터로 학습하는 절차(라벨 CSV/JSON 어댑터, AI 허브 폴더, Colab 노트북)는
+[`camera-analysis/docs/ai-training.md`](camera-analysis/docs/ai-training.md) 에 단계별로 정리했습니다.
+
+| 구성 | 파일 |
+|---|---|
+| 특징 추출(공용) | `onview/features.py` — 중심·몸통 스케일 정규화 + 18채널 시계열 → 97차원 창 특징 |
+| 추론 플러그인 | `onview/inference.py` — onnxruntime, 클래스별 확률, 임계값, 자동 폴백 |
+| 판정 병합 | `detector.analyze_sequence(classifier=...)` — 규칙이 놓친 것을 모델이 보태고, 같은 이벤트는 `model_probability` 로 교차 확인 |
+| 학습·평가 | `training/` — 혼동행렬·정밀도·재현율·오탐률 리포트, 클립 단위 교차검증(증강 누설 방지) |
+| Colab 노트북 | `training/HOMEONQ_AIHub_Training.ipynb` — 승인된 AI 허브 데이터로 전처리→학습→ONNX |
+
+리포트/앱에는 `summary.detector`(`rule` / `rule+onnx`)와 `summary.ai_model`(모델명·버전·평균 확률)이 함께 저장됩니다.
+
 ### 실행
 
 ```bash
@@ -206,7 +244,8 @@ EXPO_PUBLIC_API_URL=http://localhost:8000 npm start   # 웹: w, Expo Go: QR
 | 항목 | 명령 | 결과 |
 |---|---|---|
 | 백엔드 API/모델 | `cd api-server && pytest` | **23 passed** |
-| 파이프라인 | `cd camera-analysis && pytest` | **33 passed** |
+| 파이프라인(규칙+API) | `cd camera-analysis && pytest` | **43 passed, 3 skipped**(numpy 없는 환경) |
+| 파이프라인 + AI 학습/추론 | `pip install -r camera-analysis/requirements-train.txt` 후 `cd camera-analysis && pytest` | **86 passed** |
 | E2E (분석→HTTP→DB→조회) | `python scripts/e2e_demo.py` | **20/20 통과** |
 | Render 배포 점검 (`APP_ENV=demo`) | `python scripts/render_smoke.py` | **15/15 통과** |
 | 웹앱 런타임(jsdom) | `node scripts/webapp_smoke.test.mjs` | **20/20 통과** |
@@ -274,5 +313,6 @@ E2E 스크립트는 임시 SQLite에 마이그레이션·시드를 적용하고 
 - FCM/APNs 푸시, Outbox 재전송 워커
 - 스토어 배포(EAS Build/심사), 계정 찾기·소셜 로그인
 - 점수·낙상 임계값의 임상 검증
+- AI 허브 500시간 데이터의 실제 학습 실행(승인·다운로드·GPU 시간은 본인 계정/PC 필요) — 코드·노트북·검증은 `camera-analysis/docs/ai-training.md`
 
 이 항목들은 시연에는 영향이 없고, 위 8장 순서로 이어가면 됩니다.

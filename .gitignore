@@ -15,6 +15,13 @@ venv/
 *.db-journal
 local_events.db
 
+# AI 학습 산출물(데이터셋·리포트는 로컬 보관, 학습된 모델은 필요 시 직접 커밋)
+camera-analysis/data/
+camera-analysis/reports/
+camera-analysis/models/demo_*.onnx
+camera-analysis/models/demo_*.json
+camera-analysis/.venv-train/
+
 # 환경변수 / 비밀값 — 예시 파일(.env.example)만 커밋한다
 .env
 .env.*

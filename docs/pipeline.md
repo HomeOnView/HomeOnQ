@@ -93,8 +93,34 @@ python -m onview.cli mediapipe-check --image 사람사진.jpg
 
 > 이번 작업 환경에서는 MediaPipe 패키지 설치와 모델 다운로드는 확인했지만, 샌드박스에 CPU 정보(`/sys/devices/system/cpu`)가 없어 네이티브 런타임이 뜨지 않았습니다. 실제 PC/라즈베리파이에서는 `mediapipe-check`로 검증하세요.
 
-## 7. 알려진 한계
+## 7. AI 행동 모델(ONNX, 선택)
+
+규칙 기반 판정 위에 **학습된 모델**을 겹쳐 쓸 수 있다. AI 허브 시니어 이상행동 데이터로 학습한
+`.onnx` + `.json` 한 쌍을 `models/action_classifier.onnx` 로 두면 자동으로 활성화된다.
+
+```bash
+python -m onview.cli model-check                  # 연결 상태·모델 버전·교차검증 지표
+python -m onview.cli analyze --scenario fall      # 규칙 + AI 교차 판정
+USE_ACTION_MODEL=off python -m onview.cli demo   # 규칙만으로 실행
+```
+
+| 단계 | 모듈 | 입력 → 출력 |
+|---|---|---|
+| 특징 | `onview/features.py` | 33관점 창(30프레임) → 18채널 시계열 → 97차원 벡터 |
+| 추론 | `onview/inference.py` | 벡터 → 4클래스 확률(정상·낙상·무활동·배회) |
+| 판정 | `detector.analyze_sequence` | 규칙 이벤트 + 모델 이벤트 병합(중복은 교차 확인) |
+
+- 정규화는 **골반 중심 + 몸통 길이 스케일**이라 화면 위치·카메라 거리가 달라도 같은 특징이 나온다.
+- 병합 규칙: 규칙은 **항상** 돕고, 모델은 (a) 규칙이 놓친 이벤트를 추가하고 (b) 같은 이벤트에는
+  `model_probability` 를 붙인다. `metrics.detector` 가 `rule` / `rule+onnx` 로 남는다.
+- 폴백: 모델/메타데이터 없음 · `onnxruntime`/`numpy` 미설치 · `feature_version` 불일치 · 추론 예외 → 규칙 기반.
+- 학습 절차는 [`camera-analysis/docs/ai-training.md`](ai-training.md).
+
+## 8. 알려진 한계
 
 - 규칙 임계값은 거실 1대·정면 시점 기준의 초기값입니다. 다인 가구, 반려동물, 가구 가림에 대한 오탐 억제는 다음 단계입니다.
 - 여러 사람이 등장하는 경우 첫 번째 자세만 사용합니다(`num_poses=1`).
 - 영상 저장·클립 업로드는 메타데이터만 등록하며 실제 GCS 업로드/검증은 구현하지 않았습니다.
+- 기본 AI 모델은 97차원 특징 위의 MLP입니다. 시계열 CNN보다 표현력이 낮고, 학습 데이터와 설치 환경(카메라 높이·화각)이 다르면 성능이 떨어집니다.
+- 클립 단위 라벨만 있는 데이터는 낙상 전 정상 구간까지 낙상으로 학습될 수 있습니다(구간 라벨 권장).
+- AI 허브 500시간 데이터의 실제 학습은 저장소에 포함되지 않습니다(승인·다운로드·GPU 시간은 본인 환경 필요).

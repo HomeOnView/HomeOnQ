@@ -9,5 +9,9 @@ numpy>=1.26,<3
 mediapipe>=0.10,<2
 opencv-python-headless>=4.9,<6
 
+# 선택: 학습된 ONNX 행동 분류 모델 추론(models/action_classifier.onnx)
+#   없거나 모델 파일이 없으면 규칙 기반으로 자동 폴백한다.
+onnxruntime>=1.17,<2
+
 # 선택: Gemini 문장 생성(없으면 규칙 기반으로 자동 폴백, SDK 없이 REST 사용)
 # 추가 설치 불필요

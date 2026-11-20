@@ -70,6 +70,21 @@ class Config:
     )
     USE_MEDIAPIPE: bool = os.getenv("USE_MEDIAPIPE", "auto").lower() != "false"
 
+    # --- AI 행동 분류 모델(선택) ---
+    # .onnx + 같은 이름의 .json 메타데이터가 있으면 규칙 대신/함께 AI 판정을 사용한다.
+    # 파일이 없거나 onnxruntime 미설치, 버전 불일치 등이면 조용히 규칙 기반으로 폴백한다.
+    ACTION_MODEL_PATH: str = os.getenv(
+        "ACTION_MODEL_PATH", str(PROJECT_DIR / "models" / "action_classifier.onnx")
+    )
+    USE_ACTION_MODEL: str = os.getenv("USE_ACTION_MODEL", "auto")  # auto | on | off
+    MODEL_THREADS: int = _int("MODEL_THREADS", 1)
+    MODEL_FALL_THRESHOLD: float = _float("MODEL_FALL_THRESHOLD", 0.60)
+    MODEL_INACTIVITY_THRESHOLD: float = _float("MODEL_INACTIVITY_THRESHOLD", 0.60)
+    MODEL_WANDERING_THRESHOLD: float = _float("MODEL_WANDERING_THRESHOLD", 0.60)
+    MODEL_INACTIVITY_MIN_WINDOWS: int = _int("MODEL_INACTIVITY_MIN_WINDOWS", 3)
+    MODEL_WANDERING_MIN_WINDOWS: int = _int("MODEL_WANDERING_MIN_WINDOWS", 2)
+    MODEL_WANDERING_MIN_SECONDS: float = _float("MODEL_WANDERING_MIN_SECONDS", 5.0)
+
 
 CONFIG = Config()
 

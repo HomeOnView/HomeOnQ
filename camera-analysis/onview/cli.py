@@ -16,12 +16,13 @@ import sys
 import time
 
 from .config import CONFIG, load_config
+from .detector import analyze_sequence
 from .local_queue import LocalEventQueue
 from .pipeline import PipelineRunner
 from .pose_analyzer import PoseAnalyzer
 from .reporter import EventReporter
 from .schemas import FrameData, HealthMetrics
-from .skeleton_source import SCENARIO_FILES, analyze_sample, list_samples, load_sequence
+from .skeleton_source import SCENARIO_FILES, list_samples, load_sequence
 
 
 def _setup_logging(verbose: bool) -> None:
@@ -41,28 +42,74 @@ def cmd_list(_: argparse.Namespace) -> int:
 
 
 def cmd_analyze(args: argparse.Namespace) -> int:
+    cfg = load_config(ACTION_MODEL_PATH=args.model) if args.model else CONFIG
+    classifier, model_reason = None, "모델 미사용(--no-model)"
+    if not args.no_model:
+        try:
+            from .inference import build_classifier
+
+            classifier, model_reason = build_classifier(cfg)
+        except Exception as exc:  # numpy/onnxruntime 미설치 등
+            model_reason = f"AI 모델 사용 불가: {exc}"
     name = args.sample or SCENARIO_FILES[args.scenario]
-    path = CONFIG.SAMPLE_DIR / name
+    path = cfg.SAMPLE_DIR / name
     seq = load_sequence(path)
-    analysis = analyze_sample(path)
+    analysis = analyze_sequence(
+        seq.frames, fps=seq.fps, time_scale=seq.time_scale,
+        config=cfg, label=seq.label, classifier=classifier,
+    )
     payload = {
         "sample": path.name,
         "label": seq.label,
         "duration_s": round(analysis.duration_s, 1),
         "events": [e.as_dict() for e in analysis.events],
         "metrics": analysis.metrics,
+        "detector": analysis.metrics.get("detector", "rule"),
+        "model_reason": model_reason,
     }
     if args.json:
         print(json.dumps(payload, ensure_ascii=False, indent=2))
         return 0
     print(f"[{seq.label}] {seq.description}")
     print(f"  길이 {analysis.duration_s:.1f}s / 프레임 {len(seq.frames)} / fps {seq.fps:g}")
+    print(f"  감지기: {analysis.metrics.get('detector', 'rule')} ({model_reason})")
+    model = analysis.metrics.get("ai_model") or {}
+    if model.get("probabilities"):
+        probs = ", ".join(f"{k} {v:.2f}" for k, v in model["probabilities"].items())
+        print(f"  AI 확률: {probs} → {model.get('top_class')}")
     print(f"  지표: {analysis.metrics}")
     if analysis.events:
         for e in analysis.events:
             print(f"  ⚠️ {e.event_type} (신뢰도 {e.confidence:.2f}) {e.reasoning}")
     else:
         print("  ✅ 특이 이벤트 없음")
+    return 0
+
+
+def cmd_model_check(args: argparse.Namespace) -> int:
+    try:
+        from .inference import model_status
+
+        status = model_status(load_config(ACTION_MODEL_PATH=args.model) if args.model else CONFIG)
+    except Exception as exc:
+        print("ℹ️ 규칙 기반 감지기로 동작 중 (AI 모델 미사용)")
+        print(f"   사유: AI 모델 모듈을 불러올 수 없습니다({exc})")
+        print("   → 추론에는 numpy·onnxruntime 이 필요합니다: pip install -r requirements.txt")
+        return 0
+    if status.get("available"):
+        print("✅ ONNX AI 모델 사용 중")
+    else:
+        print("ℹ️ 규칙 기반 감지기로 동작 중 (AI 모델 미사용)")
+        print(f"   사유: {status.get('reason')}")
+    print(f"   설정 경로: {status.get('configured_path')}")
+    print(f"   모드: USE_ACTION_MODEL={status.get('use_action_model')} / onnxruntime={status.get('onnxruntime') or '미설치'}")
+    if status.get("available"):
+        print(f"   모델: {status.get('model_name')} {status.get('model_version')} ({status.get('backend')}, {status.get('input_kind')}, 창 {status.get('window')}프레임)")
+        print(f"   클래스: {', '.join(status.get('classes', []))}")
+        print(f"   특징 버전: {status.get('feature_version')} / 학습: {status.get('trained_at')}")
+        cv = (status.get("val_metrics") or {}).get("cv") or {}
+        if cv:
+            print(f"   교차검증: 정확도 {cv.get('accuracy')} / 매크로 F1 {cv.get('macro_f1')}")
     return 0
 
 
@@ -73,6 +120,7 @@ def cmd_demo(args: argparse.Namespace) -> int:
         DEVICE_TOKEN=args.device_token,
         DB_PATH=args.db,
         SENIOR_NAME=args.senior,
+        **({"ACTION_MODEL_PATH": args.model} if getattr(args, "model", None) else {}),
     )
     queue = LocalEventQueue(cfg.DB_PATH)
     reporter = EventReporter(config=cfg, local_queue=queue)
@@ -161,7 +209,12 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("analyze", help="샘플 시퀀스 분석")
     p.add_argument("--scenario", default="normal", choices=list(SCENARIO_FILES))
     p.add_argument("--sample", help="samples/ 안의 파일명 직접 지정")
+    p.add_argument("--model", help="ONNX 모델 경로(미지정 시 ACTION_MODEL_PATH)")
+    p.add_argument("--no-model", action="store_true", help="규칙 기반만으로 분석")
     p.add_argument("--json", action="store_true")
+
+    p = sub.add_parser("model-check", help="ONNX AI 모델 연결 상태 확인")
+    p.add_argument("--model", help="ONNX 모델 경로(미지정 시 ACTION_MODEL_PATH)")
 
     p = sub.add_parser("demo", help="분석 후 백엔드로 전송")
     p.add_argument("--scenario", default="all", choices=[*SCENARIO_FILES, "all"])
@@ -171,6 +224,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--mode", default="HTTP", choices=["HTTP", "MOCK"])
     p.add_argument("--send", action="store_true", help="MOCK 모드에서도 전송 시도")
     p.add_argument("--db", default=CONFIG.DB_PATH)
+    p.add_argument("--model", help="ONNX 모델 경로(미지정 시 ACTION_MODEL_PATH)")
 
     p = sub.add_parser("mediapipe-check", help="이미지에서 MediaPipe 관절 추출 확인")
     p.add_argument("--image", required=True)
@@ -190,6 +244,7 @@ def main(argv: list[str] | None = None) -> int:
         "analyze": cmd_analyze,
         "demo": cmd_demo,
         "mediapipe-check": cmd_mediapipe_check,
+        "model-check": cmd_model_check,
         "serve": cmd_serve,
     }[args.command](args)
 

@@ -6,6 +6,7 @@ z: 상대 깊이, visibility: 0~1)를 따른다. 미터 단위가 아니므로 �
 """
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timezone
 from math import atan2, degrees
 
@@ -17,6 +18,8 @@ from .schemas import (
 )
 
 Frame = list[list[float]]
+
+logger = logging.getLogger(__name__)
 
 
 def _point(frame: Frame, idx: int) -> tuple[float, float, float]:
@@ -110,7 +113,15 @@ def analyze_sequence(
     config: Config | None = None,
     started_at: datetime | None = None,
     label: str = "",
+    classifier: object | None = None,
 ) -> SequenceAnalysis:
+    """규칙 기반 감지(+선택적 ONNX 분류기 교차 판정).
+
+    `classifier`(=`onview.inference.ActionModelClassifier`)가 주어지면 규칙 결과에
+    AI 모델 판정을 더한다. 모델이 규칙이 놓친 낙상·무활동·배회를 찾으면 이벤트로 추가하고,
+    같은 종류가 이미 있으면 규칙 이벤트의 features에 모델 확률을 덧붙인다.
+    모델 추론에서 무슨 일이 생겨도 이 함수는 예외를 던지지 않고 규칙 결과를 돌려준다.
+    """
     cfg = config or CONFIG
     if not frames:
         return SequenceAnalysis([], fps, time_scale, [], {}, 0.0, 0.0)
@@ -244,8 +255,67 @@ def analyze_sequence(
         "clip_seconds": round(len(frames) / fps, 2),
         "time_scale": time_scale,
         "label": label,
+        "detector": "rule",
     }
+
+    # --- 선택: ONNX AI 모델 교차 판정 ---
+    if classifier is not None:
+        events, metrics = _attach_model_events(
+            events, metrics, classifier, frames, fps=fps, time_scale=time_scale,
+            started_at=started_at, cfg=cfg,
+        )
+
     return SequenceAnalysis(
         frames=frames, fps=fps, time_scale=time_scale, events=events, metrics=metrics,
         torso_angle_max=max(angles), drop_speed_max=drop_speed_max,
     )
+
+
+def _attach_model_events(
+    events: list[DetectedEvent],
+    metrics: dict,
+    classifier: object,
+    frames: list[Frame],
+    fps: float,
+    time_scale: float,
+    started_at: datetime,
+    cfg: Config,
+) -> tuple[list[DetectedEvent], dict]:
+    """AI 모델 판정을 규칙 결과에 합친다. 실패하면 규칙 결과를 그대로 둔다."""
+    from .inference import ModelAssessment  # 순환 참조 방지(지연 import)
+
+    try:
+        analyze = getattr(classifier, "analyze", None)
+        if analyze is None or getattr(classifier, "available", False) is False:
+            raise RuntimeError("분류기를 사용할 수 없습니다")
+        assessment = analyze(
+            frames, fps=fps, time_scale=time_scale, started_at=started_at, config=cfg
+        )
+        if not isinstance(assessment, ModelAssessment):
+            raise RuntimeError(f"예상하지 못한 모델 출력 형식: {type(assessment).__name__}")
+    except Exception as exc:  # 모델 문제로 파이프라인을 멈추지 않는다
+        logger.warning("⚠️ [AI모델] 추론 실패 → 규칙 기반 유지: %s", exc)
+        metrics["detector"] = "rule"
+        metrics["ai_model"] = {"source": "rule", "fallback_reason": f"추론 실패: {exc}"}
+        return events, metrics
+
+    by_kind: dict[str, DetectedEvent] = {}
+    for event in events:
+        current = by_kind.get(event.kind)
+        if current is None or event.confidence > current.confidence:
+            by_kind[event.kind] = event
+
+    added = 0
+    for model_event in assessment.events:
+        rule_event = by_kind.get(model_event.kind)
+        if rule_event is not None:
+            rule_event.features.setdefault("model_probability", model_event.features.get("probability"))
+            rule_event.features.setdefault("model", model_event.features.get("model"))
+            continue
+        events.append(model_event)
+        by_kind[model_event.kind] = model_event
+        added += 1
+
+    metrics["detector"] = "rule+onnx"
+    metrics["ai_model"] = {**assessment.metrics, "model_only_events": added}
+    return events, metrics

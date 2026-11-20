@@ -1,0 +1,27 @@
+# HOMEONQ 행동 모델 학습·전처리 전용 의존성
+#
+#   cd camera-analysis
+#   python -m venv .venv && source .venv/bin/activate     # Windows: .venv\Scripts\activate
+#   pip install -r requirements-train.txt
+#
+# 배포 서버(api-server)와 Render 무료 플랜(512MB)에는 이 파일을 설치하지 않는다.
+# 학습은 Google Colab 무료 GPU에서도 그대로 돌아간다(HOMEONQ_AIHub_Training.ipynb).
+
+# 공통(추론에도 필요)
+numpy>=1.26,<3
+onnxruntime>=1.17,<2
+
+# ONNX 그래프 생성/검증
+onnx>=1.16,<2
+
+# 영상 → 33관절 추출(MediaPipe). 학습 PC/Colab에만 필요하다.
+mediapipe>=0.10,<2
+opencv-python-headless>=4.9,<6
+
+# 학습·테스트 도구
+pytest>=8,<10
+
+# 선택: 노트북 그래프/표
+# matplotlib>=3.8
+# 선택: PyTorch 1D-CNN 같은 시계열 모델로 확장할 때(현재 기본 백엔드는 NumPy MLP)
+# torch>=2.2

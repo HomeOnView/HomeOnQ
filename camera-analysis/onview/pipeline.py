@@ -87,11 +87,21 @@ class PipelineResult:
             "report_source": self.report_meta.get("source"),
             "behavior_count": len(self.behavior_payloads),
             "fall_count": len(self.fall_payloads),
+            "detector": self.analysis.metrics.get("detector", "rule"),
+            "ai_model": self.analysis.metrics.get("ai_model"),
         }
 
 
 def _iso(dt: datetime) -> str:
     return dt.astimezone(timezone.utc).isoformat()
+
+
+def _compact_model_summary(model: dict | None) -> dict | None:
+    """리포트에 넣을 AI 모델 요약(전체 창 정보는 segment_metrics에 있다)."""
+    if not model:
+        return None
+    keys = ("source", "model_name", "model_version", "top_class", "window", "window_count", "probabilities")
+    return {k: model[k] for k in keys if k in model}
 
 
 class PipelineRunner:
@@ -100,10 +110,28 @@ class PipelineRunner:
         config: Config | None = None,
         reporter: EventReporter | None = None,
         queue: LocalEventQueue | None = None,
+        classifier: object | None = None,
+        load_model: bool = True,
     ):
         self.config = config or CONFIG
         self.queue = queue or LocalEventQueue(self.config.DB_PATH)
         self.reporter = reporter or EventReporter(config=self.config, local_queue=self.queue)
+        # ONNX 행동 분류기는 한 번만 로드해 재사용한다. 없으면 규칙 기반으로 동작한다.
+        self.classifier = classifier
+        self.model_reason = "외부에서 주입된 분류기" if classifier is not None else "모델 미사용"
+        if classifier is None and load_model:
+            try:
+                from .inference import build_classifier
+
+                self.classifier, self.model_reason = build_classifier(self.config)
+            except Exception as exc:  # numpy/onnxruntime 미설치 등 — 규칙 기반으로 계속
+                self.classifier = None
+                self.model_reason = f"AI 모델 모듈을 불러올 수 없습니다({exc}) → 규칙 기반 사용"
+        logger.info(
+            "🧠 [Pipeline] 감지기: %s (%s)",
+            "규칙+ONNX" if self.classifier is not None else "규칙",
+            self.model_reason,
+        )
 
     # --- 페이로드 준비 ---
     def prepare(
@@ -162,6 +190,8 @@ class PipelineRunner:
             "rows": build_summary_rows(daily, baseline),
             "fall_count": len(fall_events),
             "segment_metrics": analysis.metrics,
+            "detector": analysis.metrics.get("detector", "rule"),
+            "ai_model": _compact_model_summary(analysis.metrics.get("ai_model")),
             "projection": "daily_context" if seq.meta.get("daily_context") else "measured_only",
         }
         report_payload = {
@@ -251,7 +281,7 @@ class PipelineRunner:
     def analyze(self, seq: SampleSequence) -> SequenceAnalysis:
         return analyze_sequence(
             seq.frames, fps=seq.fps, time_scale=seq.time_scale,
-            config=self.config, label=seq.label,
+            config=self.config, label=seq.label, classifier=self.classifier,
         )
 
     def run_sequence(self, seq: SampleSequence, senior_name: str | None = None, send: bool = True) -> PipelineResult:
