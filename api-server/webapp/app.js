@@ -8,6 +8,8 @@
   const LS_TOKEN = 'homeonq.token';
   const LS_EMAIL = 'homeonq.email';
   const SOS_NUMBER = '01000000000';
+  /* 등록된 어르신 프로필 사진(저해상도·픽셀 처리) — 설정 탭 아바타·홈 프로필 공용 */
+  const DEFAULT_PHOTO = './assets/senior-profile.jpg';
 
   const $ = (sel, root) => (root || document).querySelector(sel);
   const $$ = (sel, root) => Array.from((root || document).querySelectorAll(sel));
@@ -187,6 +189,7 @@
     return root;
   }
   function closeModal() {
+    alarmStopAll(); // 알람 시연 중이었다면 경보음·타이머를 반드시 멈춘다
     const root = $('#modal-root');
     root.classList.remove('open');
     root.innerHTML = '';
@@ -254,9 +257,7 @@
   function renderProfile() {
     const s = activeSenior();
     const tags = (s.medical_conditions || []).map((t) => '<span class="tag warn">' + esc(t) + '</span>').join('');
-    const photo = s.photo_url
-      ? '<img class="avatar" alt="" src="' + esc(s.photo_url) + '" onerror="this.outerHTML=\'<div class=&quot;avatar-fallback&quot;>' + esc((s.display_name || '?').replace(/ .*/, '').slice(0, 1)) + '</div>\'" />'
-      : '<div class="avatar-fallback">' + esc((s.display_name || '?').replace(/ .*/, '').slice(0, 1)) + '</div>';
+    const photo = '<img class="avatar" alt="" src="' + esc(photoSrc(s)) + '" onerror="this.outerHTML=\'<div class=&quot;avatar-fallback&quot;>' + esc((s.display_name || '?').replace(/ .*/, '').slice(0, 1)) + '</div>\'" />';
     const detailBits = [];
     if (s.height_cm) detailBits.push(s.height_cm + 'cm');
     if (s.weight_kg) detailBits.push(s.weight_kg + 'kg');
@@ -316,31 +317,87 @@
     setTimeout(tick, 120);
   }
 
-  function renderReport() {
+  function photoSrc(s) {
+    const url = s && s.photo_url ? String(s.photo_url).trim() : '';
+    return url || DEFAULT_PHOTO;
+  }
+
+  function shortName(name) {
+    return String(name || '').replace(/\s*어르신\s*$/, '') || '어르신';
+  }
+
+  /* 이벤트 탭 하단 — 최근 상태·핵심 포인트 2~3줄 요약 */
+  function renderEventSummary() {
+    const card = $('#event-summary-card');
+    if (!card) return;
     const r = activeReport();
-    const card = $('#report-card');
-    if (!r) {
-      card.innerHTML = '<div class="report-head"><div class="report-eyebrow"><span class="spark">✦</span> AI 안심 리포트</div></div>' +
-        '<p class="report-empty">아직 오늘의 리포트가 도착하지 않았습니다. 분석이 시작되면 이곳에 하루가 정리됩니다.</p>';
-      return;
+    const s = activeSenior();
+    const rows = (r && r.summary && r.summary.rows) || [];
+    const fallEvents = (state.events || []).filter((e) => e.kind === 'fall');
+    const factors = ((r && r.factors && r.factors.items) || []).filter((f) => f && (f.detail || f.label));
+    const lines = [];
+
+    if (r && r.score != null) {
+      const style = riskStyle(r.risk_level);
+      lines.push(
+        '<p class="es-line es-head">' +
+          '<span class="es-badge" style="color:' + style.color + ';background:' + style.bg + '">' + esc(r.risk_label || style.label) + '</span>' +
+          '<b>' + esc(r.score) + '점</b>' +
+          '<span class="es-sub">오늘 안심 점수</span>' +
+        '</p>'
+      );
+    } else {
+      lines.push('<p class="es-line es-head"><span class="es-sub">오늘 안심 점수</span><b>-</b></p>');
     }
-    const sourceLabel = { 'pipeline-gemini': 'Gemini 생성', 'pipeline-rule': '규칙 기반', 'demo-data': '데모', 'demo-seed': '시연 데이터' }[r.source] || (r.source || '');
-    const narrative = r.narrative || '';
-    const long = narrative.length > 260;
+
+    if (rows.length) {
+      lines.push('<p class="es-line">' + rows.slice(0, 3).map((row) =>
+        '<span class="es-chip">' + (ICONS[row.key] || '•') + ' ' + esc(row.label) + ' <b>' + esc(fmtNumber(row.value)) + esc(row.unit || '') + '</b></span>'
+      ).join('') + '</p>');
+    } else {
+      lines.push('<p class="es-line"><span class="es-chip">오늘 집계된 활동이 아직 없습니다</span></p>');
+    }
+
+    if (fallEvents.length) {
+      lines.push('<p class="es-line es-warn">⚠️ 최근 7일 낙상 의심 <b>' + fallEvents.length + '건</b> · 최근 ' + esc(relTime(fallEvents[0].occurred_at)) + '</p>');
+    } else if (factors.length) {
+      lines.push('<p class="es-line es-warn">💡 ' + esc(factors[0].detail || factors[0].label) + '</p>');
+    } else {
+      lines.push('<p class="es-line es-ok">🌿 최근 7일 낙상 없이 지냈습니다</p>');
+    }
+
     card.innerHTML =
-      '<div class="report-head">' +
-        '<div class="report-eyebrow"><span class="spark">✦</span> AI 안심 리포트</div>' +
-        (sourceLabel ? '<span class="report-source">' + esc(sourceLabel) + (r.model_name ? ' · ' + esc(r.model_name) : '') + '</span>' : '') +
+      '<div class="card-title"><h3>' + esc(shortName(s.display_name)) + ' 최근 상태</h3><span>' + (r && r.report_date ? fmtDate(r.report_date) + ' 기준' : '방금') + '</span></div>' +
+      lines.join('');
+  }
+
+  /* 설정 탭 상단 — 어르신 프로필(등록된 사진) */
+  function renderSettingsProfile() {
+    const card = $('#settings-profile');
+    if (!card) return;
+    const s = activeSenior();
+    const fallback = esc((s.display_name || '?').replace(/ .*/, '').slice(0, 1));
+    card.innerHTML =
+      '<div class="profile-hero-top">' +
+        '<img class="avatar-round" alt="어르신 프로필 사진" src="' + esc(photoSrc(s)) + '" />' +
+        '<div class="profile-hero-main">' +
+          '<span class="profile-hero-label">어르신 프로필</span>' +
+          '<strong class="profile-hero-name">' + esc(s.display_name) + '</strong>' +
+          '<span class="profile-hero-meta">' + esc(ageGender(s) || '정보 없음') + '</span>' +
+        '</div>' +
+        '<button class="link-btn" id="settings-photo-edit" type="button">수정</button>' +
       '</div>' +
-      '<h3 class="report-headline">' + esc(r.headline || '오늘의 리포트') + '</h3>' +
-      '<p class="report-body' + (long ? ' clamped' : '') + '" id="report-body">' + esc(narrative) + '</p>' +
-      (long ? '<button class="link-btn report-more" id="report-more" type="button">전체 읽기</button>' : '');
-    const more = $('#report-more');
-    if (more) more.addEventListener('click', () => {
-      const body = $('#report-body');
-      body.classList.toggle('clamped');
-      more.textContent = body.classList.contains('clamped') ? '전체 읽기' : '접기';
-    });
+      '<div class="profile-hero-foot">' +
+        '<span>🔒 얼굴이 식별되지 않도록 저해상도(픽셀) 처리한 사진입니다</span>' +
+      '</div>';
+    const edit = $('#settings-photo-edit');
+    if (edit) edit.addEventListener('click', openProfileEdit);
+    const round = $('.avatar-round', card);
+    if (round && round.tagName === 'IMG') {
+      round.addEventListener('error', () => {
+        round.outerHTML = '<div class="avatar-round avatar-fallback">' + fallback + '</div>';
+      }, { once: true });
+    }
   }
 
   const ICONS = { steps: '🚶', night_activity: '🌙', toilet: '🚻', bedroom: '🛏', inactivity: '⏳', wandering: '↔️' };
@@ -520,11 +577,12 @@
   function renderAll() {
     renderProfile();
     renderScore();
-    renderReport();
     renderSummary();
     renderHomeAlert();
     renderEvents();
+    renderEventSummary();
     renderSettings();
+    renderSettingsProfile();
     renderScenarios();
     $('#home-date').textContent = fmtDate((activeReport() || {}).report_date || new Date().toISOString());
     $('#home-greeting').textContent = state.demo ? '오늘의 안심 리포트 (데모)' : '오늘의 안심 리포트';
@@ -879,6 +937,427 @@
     }
   }
 
+  /* -------------------------------------------------- 낙상 3단계 에스컬레이션 알람 */
+  const ALARM = {
+    stage: 0,        // 0 설정 · 1 보호자 알림 · 2 앱 알람 · 3 자동 전화 · 4 종료
+    waitSec: 3,
+    ringSec: 12,
+    left: 0,
+    phone: '010-0000-0000',
+    calling: false,
+    soundOn: true,
+    timers: [],
+    tick: null,
+    siren: null,
+    root: null,
+  };
+
+  const ALARM_STEPS = [
+    { n: 1, title: '보호자 1차 알림', sub: '낙상 후 3분 무움직임' },
+    { n: 2, title: '어르신 앱 알람', sub: '소리·진동 · 밀어서 끄기' },
+    { n: 3, title: '보호자 자동 전화', sub: '미응답 시 원터치 연결' },
+  ];
+
+  function alarmStepsHtml(stage) {
+    return ALARM_STEPS.map((s) => {
+      const cls = stage > s.n ? 'done' : stage === s.n ? 'active' : '';
+      return '<li class="' + cls + '">' +
+        '<span class="alarm-step-num">' + (stage > s.n ? '✓' : s.n) + '</span>' +
+        '<span class="alarm-step-text"><b>' + s.title + '</b><i>' + s.sub + '</i></span>' +
+      '</li>';
+    }).join('');
+  }
+
+  let audioCtx = null;
+  function getAudioContext() {
+    const C = window.AudioContext || window.webkitAudioContext;
+    if (!C) return null;
+    if (!audioCtx) {
+      try { audioCtx = new C(); } catch (e) { return null; }
+    }
+    if (audioCtx.state === 'suspended') { try { audioCtx.resume(); } catch (e) { /* noop */ } }
+    return audioCtx;
+  }
+
+  function startSiren() {
+    const ctx = getAudioContext();
+    if (!ctx) return false;
+    stopSiren();
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+    gain.connect(ctx.destination);
+    const osc = ctx.createOscillator();
+    osc.type = 'square';
+    const t0 = ctx.currentTime;
+    // 0.5초마다 660↔880Hz 를 오가는 경보음 (약 60초)
+    for (let i = 0; i < 120; i += 1) osc.frequency.setValueAtTime(i % 2 ? 660 : 880, t0 + i * 0.5);
+    osc.connect(gain);
+    osc.start(t0);
+    gain.gain.exponentialRampToValueAtTime(0.05, t0 + 0.08);
+    ALARM.siren = { osc, gain };
+    if (navigator.vibrate) { try { navigator.vibrate([420, 180, 420, 180, 420]); } catch (e) { /* noop */ } }
+    return true;
+  }
+
+  function stopSiren() {
+    if (navigator.vibrate) { try { navigator.vibrate(0); } catch (e) { /* noop */ } }
+    if (!ALARM.siren) return;
+    try {
+      const t = audioCtx ? audioCtx.currentTime : 0;
+      ALARM.siren.gain.gain.cancelScheduledValues(t);
+      ALARM.siren.gain.gain.setValueAtTime(0.0001, t);
+      ALARM.siren.osc.stop(t + 0.06);
+    } catch (e) { /* noop */ }
+    ALARM.siren = null;
+  }
+
+  function alarmClearTimers() {
+    ALARM.timers.forEach((t) => clearTimeout(t));
+    ALARM.timers = [];
+    if (ALARM.tick) { clearInterval(ALARM.tick); ALARM.tick = null; }
+  }
+
+  function alarmStopAll() {
+    alarmClearTimers();
+    stopSiren();
+    ALARM.stage = 0;
+    ALARM.calling = false;
+    ALARM.root = null;
+  }
+
+  function alarmLater(fn, ms) {
+    const t = setTimeout(fn, ms);
+    ALARM.timers.push(t);
+    return t;
+  }
+
+  function phoneHref() { return 'tel:' + String(ALARM.phone || '').replace(/[^0-9+]/g, ''); }
+
+  function openAlarmDemo() {
+    alarmStopAll();
+    ALARM.stage = 0;
+    openModal(
+      '<div class="sheet alarm-sheet" role="dialog" aria-modal="true">' +
+        '<div class="sheet-handle"></div>' +
+        '<h2>🔔 낙상 3단계 알람</h2>' +
+        '<p class="sheet-sub">낙상 뒤 <b>3분(180초)</b> 동안 움직임이 없으면 보호자 1차 알림, 계속 무움직임이면 어르신 앱 알람, 알람에도 응답이 없으면 보호자에게 자동 전화로 이어집니다.</p>' +
+        '<ol class="alarm-steps" id="alarm-steps">' + alarmStepsHtml(0) + '</ol>' +
+        '<div id="alarm-body"></div>' +
+        '<div class="sheet-actions"><button class="btn ghost block" data-close type="button">닫기</button></div>' +
+      '</div>',
+      { onMount(root) { ALARM.root = root; renderAlarmBody(); } }
+    );
+  }
+
+  function renderAlarmBody() {
+    const root = ALARM.root;
+    if (!root) return;
+    const body = $('#alarm-body', root);
+    if (!body) return;
+    const steps = $('#alarm-steps', root);
+    if (steps) steps.innerHTML = alarmStepsHtml(ALARM.stage);
+    const sheet = $('.alarm-sheet', root);
+    if (sheet) sheet.classList.toggle('ringing', ALARM.stage === 2);
+
+    if (ALARM.stage === 0) body.innerHTML = alarmSetupHtml();
+    else if (ALARM.stage === 1) body.innerHTML = alarmStage1Html();
+    else if (ALARM.stage === 2) body.innerHTML = alarmStage2Html();
+    else if (ALARM.stage === 3) body.innerHTML = ALARM.calling ? alarmCallScreenHtml() : alarmStage3Html();
+    else body.innerHTML = alarmDoneHtml();
+    bindAlarmBody();
+  }
+
+  function alarmSetupHtml() {
+    return '<div class="alarm-setup">' +
+      '<div class="alarm-basis"><b>실제 서비스 기준</b>낙상 후 <b>3분(180초)</b> 무움직임 → 보호자 1차 알림 · 어르신 알람 <b>1분</b> 미응답 → 보호자 자동 전화</div>' +
+      '<div class="form-grid">' +
+        '<label class="field"><span>1단계 대기 시간</span>' +
+          '<select id="alarm-wait">' +
+            '<option value="3">3초 (시연용)</option>' +
+            '<option value="10">10초</option>' +
+            '<option value="30">30초</option>' +
+            '<option value="180">180초 (실제 기준 · 3분)</option>' +
+          '</select></label>' +
+        '<label class="field"><span>2단계 알람 미응답 판정</span>' +
+          '<select id="alarm-ring">' +
+            '<option value="6">6초 (시연용)</option>' +
+            '<option value="12" selected>12초</option>' +
+            '<option value="30">30초</option>' +
+            '<option value="60">60초 (실제 기준 · 1분)</option>' +
+          '</select></label>' +
+        '<label class="field span2"><span>3단계 연결 번호 (보호자)</span>' +
+          '<input id="alarm-phone" type="tel" inputmode="tel" value="010-0000-0000" /></label>' +
+      '</div>' +
+      '<button class="btn primary block" id="alarm-start" type="button">3단계 알람 시작</button>' +
+      '<p class="alarm-note">시연에서는 대기 시간을 3초로 줄여 바로 체험할 수 있습니다. 실제 서비스 기준은 <b>3분(180초)</b>입니다.</p>' +
+    '</div>';
+  }
+
+  function alarmStage1Html() {
+    return '<div class="alarm-panel">' +
+      '<div class="alarm-ring"><b id="alarm-count">' + ALARM.waitSec + '</b><small>초</small></div>' +
+      '<p class="alarm-title">낙상 후 <b>무움직임</b> 확인 중</p>' +
+      '<p class="alarm-sub">' + ALARM.waitSec + '초 동안 움직임이 없으면 보호자에게 1차 알림을 보냅니다.</p>' +
+      '<div class="alarm-bar"><span id="alarm-progress"></span></div>' +
+      '<div class="alarm-log">' +
+        '<div class="ok">✓ 낙상 의심 감지 · 거실 카메라 관절 분석</div>' +
+        '<div id="alarm-stage1-status">보호자 1차 알림 대기 중…</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function alarmStage2Html() {
+    return '<div class="alarm-panel alarm-ringing">' +
+      '<div class="alarm-bell">🔔</div>' +
+      '<p class="alarm-title">어르신 앱 알람이 울리고 있어요</p>' +
+      '<p class="alarm-sub">보호자 알림에도 움직임이 없어 앱 알람이 켜졌습니다. 동그라미를 <b>오른쪽 끝까지 밀면</b> 알람이 꺼집니다.</p>' +
+      '<div class="slide-track" id="slide-track" role="slider" tabindex="0" aria-label="밀어서 알람 끄기" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">' +
+        '<span class="slide-fill" id="slide-fill"></span>' +
+        '<span class="slide-label">밀어서 알람 끄기</span>' +
+        '<span class="slide-knob" id="slide-knob">→</span>' +
+      '</div>' +
+      '<button class="btn tiny ghost" id="alarm-sound" type="button">🔊 소리 다시 켜기 / 테스트</button>' +
+      '<p class="alarm-note" id="alarm-sound-state">' + (ALARM.soundOn ? '경보음과 진동이 함께 울립니다.' : '소리가 꺼져 있습니다. 위 버튼을 눌러 켜 주세요.') +
+        ' (아이폰 무음 모드에서는 소리가 나지 않을 수 있어요)</p>' +
+      '<div class="alarm-ring-timer">응답이 없으면 <b id="alarm-ring-left">' + ALARM.ringSec + '</b>초 뒤 3단계 · 보호자 자동 전화</div>' +
+      '<button class="link-btn" id="alarm-skip" type="button">응답이 없는 상황으로 시연 →</button>' +
+    '</div>';
+  }
+
+  function alarmStage3Html() {
+    return '<div class="alarm-panel">' +
+      '<div class="alarm-bell alarm-bell-call">📞</div>' +
+      '<p class="alarm-title">3단계 · 보호자에게 자동 연결합니다</p>' +
+      '<p class="alarm-sub">알람에도 응답이 없어 보호자 <b>' + esc(ALARM.phone) + '</b> 님에게 전화를 겁니다.</p>' +
+      '<div class="alarm-ring"><b id="alarm-call-left">5</b><small>초</small></div>' +
+      '<a class="btn danger block" id="alarm-call-now" href="' + esc(phoneHref()) + '">📞 지금 바로 전화하기</a>' +
+      '<div class="alarm-log"><div class="ok">✓ 어르신 앱 알람 미응답</div><div>보호자 자동 연결 대기 중…</div></div>' +
+    '</div>';
+  }
+
+  function alarmCallScreenHtml() {
+    return '<div class="alarm-panel alarm-call">' +
+      '<div class="alarm-call-avatar">📞</div>' +
+      '<p class="alarm-call-label">긴급 연결</p>' +
+      '<h3 class="alarm-call-name">보호자 ' + esc(ALARM.phone) + '</h3>' +
+      '<p class="alarm-sub">브라우저 보안 정책상 자동 발신은 막혀 있습니다. 아래 큰 버튼을 한 번 누르면 바로 연결됩니다.</p>' +
+      '<a class="btn danger block call-big" id="alarm-call-now" href="' + esc(phoneHref()) + '">📞 전화 연결</a>' +
+      '<button class="btn ghost block" id="alarm-cancel" type="button">연결 취소</button>' +
+    '</div>';
+  }
+
+  function alarmDoneHtml() {
+    return '<div class="alarm-panel">' +
+      '<div class="alarm-bell alarm-bell-ok">✓</div>' +
+      '<p class="alarm-title">알람을 껐습니다</p>' +
+      '<p class="alarm-sub">보호자에게 <b>안심 응답</b>을 보냈습니다. 3단계 자동 전화는 진행되지 않습니다.</p>' +
+      '<div class="alarm-log">' +
+        '<div class="ok">✓ 어르신이 밀어서 알람을 껐습니다</div>' +
+        '<div class="ok">✓ 보호자에게 안심 응답 전송</div>' +
+      '</div>' +
+      '<button class="btn navy block" id="alarm-retry" type="button">다시 시연하기</button>' +
+    '</div>';
+  }
+
+  function bindAlarmBody() {
+    const root = ALARM.root;
+    if (!root) return;
+
+    const startBtn = $('#alarm-start', root);
+    if (startBtn) startBtn.addEventListener('click', () => {
+      // 버튼 클릭(사용자 제스처) 안에서 오디오 컨텍스트를 열어 iOS Safari 자동재생 제한을 피한다.
+      getAudioContext();
+      const waitSel = $('#alarm-wait', root);
+      const ringSel = $('#alarm-ring', root);
+      const phoneInput = $('#alarm-phone', root);
+      ALARM.waitSec = Math.max(1, Number(waitSel && waitSel.value) || 3);
+      ALARM.ringSec = Math.max(3, Number(ringSel && ringSel.value) || 12);
+      ALARM.phone = ((phoneInput && phoneInput.value) || '010-0000-0000').trim();
+      ALARM.soundOn = true;
+      ALARM.calling = false;
+      startStage1();
+    });
+
+    const soundBtn = $('#alarm-sound', root);
+    if (soundBtn) soundBtn.addEventListener('click', () => {
+      ALARM.soundOn = true;
+      const ok = startSiren();
+      const state = $('#alarm-sound-state', root);
+      if (state) state.textContent = ok ? '경보음과 진동이 함께 울립니다.' : '이 브라우저에서는 경보음을 재생할 수 없습니다.';
+    });
+
+    const skip = $('#alarm-skip', root);
+    if (skip) skip.addEventListener('click', () => goStage3());
+
+    const cancel = $('#alarm-cancel', root);
+    if (cancel) cancel.addEventListener('click', () => { ALARM.calling = false; ALARM.stage = 3; renderAlarmBody(); });
+
+    const retry = $('#alarm-retry', root);
+    if (retry) retry.addEventListener('click', () => {
+      alarmClearTimers(); stopSiren();
+      ALARM.stage = 0; ALARM.calling = false;
+      renderAlarmBody();
+    });
+
+    if (ALARM.stage === 2) initSlideToDismiss();
+  }
+
+  function startStage1() {
+    alarmClearTimers();
+    ALARM.stage = 1;
+    ALARM.left = ALARM.waitSec;
+    renderAlarmBody();
+    ALARM.tick = setInterval(() => {
+      if (ALARM.stage !== 1) { clearInterval(ALARM.tick); ALARM.tick = null; return; }
+      ALARM.left = Math.max(0, ALARM.left - 1);
+      const num = $('#alarm-count', ALARM.root);
+      if (num) num.textContent = String(ALARM.left);
+      const bar = $('#alarm-progress', ALARM.root);
+      if (bar) bar.style.width = Math.round((1 - ALARM.left / ALARM.waitSec) * 100) + '%';
+      if (ALARM.left <= 0) {
+        clearInterval(ALARM.tick);
+        ALARM.tick = null;
+        finishStage1();
+      }
+    }, 1000);
+  }
+
+  function finishStage1() {
+    if (ALARM.stage !== 1) return;
+    const status = $('#alarm-stage1-status', ALARM.root);
+    const bar = $('#alarm-progress', ALARM.root);
+    if (bar) bar.style.width = '100%';
+    if (status) { status.className = 'ok'; status.innerHTML = '✓ 보호자에게 1차 알림을 발송했습니다'; }
+    alarmLater(() => {
+      ALARM.stage = 2;
+      ALARM.left = ALARM.ringSec;
+      renderAlarmBody();
+      startStage2();
+    }, 1500);
+  }
+
+  function startStage2() {
+    if (ALARM.soundOn && !ALARM.siren) startSiren();
+    ALARM.tick = setInterval(() => {
+      if (ALARM.stage !== 2) { clearInterval(ALARM.tick); ALARM.tick = null; return; }
+      ALARM.left = Math.max(0, ALARM.left - 1);
+      const num = $('#alarm-ring-left', ALARM.root);
+      if (num) num.textContent = String(ALARM.left);
+      if (ALARM.left <= 0) {
+        clearInterval(ALARM.tick);
+        ALARM.tick = null;
+        goStage3();
+      }
+    }, 1000);
+  }
+
+  function goStage3() {
+    if (ALARM.stage !== 2) return;
+    alarmClearTimers();
+    stopSiren();
+    ALARM.stage = 3;
+    ALARM.calling = false;
+    ALARM.left = 5;
+    renderAlarmBody();
+    ALARM.tick = setInterval(() => {
+      if (ALARM.stage !== 3 || ALARM.calling) { clearInterval(ALARM.tick); ALARM.tick = null; return; }
+      ALARM.left = Math.max(0, ALARM.left - 1);
+      const num = $('#alarm-call-left', ALARM.root);
+      if (num) num.textContent = String(ALARM.left);
+      if (ALARM.left <= 0) {
+        clearInterval(ALARM.tick);
+        ALARM.tick = null;
+        ALARM.calling = true;
+        renderAlarmBody();
+      }
+    }, 1000);
+  }
+
+  function dismissAlarm() {
+    if (ALARM.stage !== 2) return;
+    alarmClearTimers();
+    stopSiren();
+    ALARM.stage = 4;
+    renderAlarmBody();
+    toast('알람을 껐습니다. 보호자에게 안심 응답을 보냈습니다.');
+  }
+
+  function initSlideToDismiss() {
+    const root = ALARM.root;
+    if (!root) return;
+    const track = $('#slide-track', root);
+    const knob = $('#slide-knob', root);
+    const fill = $('#slide-fill', root);
+    if (!track || !knob) return;
+
+    let dragging = false;
+    let startX = 0;
+    let max = 0;
+
+    const setPos = (dx) => {
+      const x = Math.max(0, Math.min(max, dx));
+      knob.style.transform = 'translateX(' + x + 'px)';
+      if (fill) fill.style.width = (x + 34) + 'px';
+      const pct = max > 0 ? Math.round((x / max) * 100) : 0;
+      track.setAttribute('aria-valuenow', String(pct));
+      track.classList.toggle('ready', pct >= 82);
+      return x;
+    };
+    const reset = () => {
+      knob.style.transition = 'transform .18s ease-out';
+      setPos(0);
+      setTimeout(() => { knob.style.transition = ''; }, 200);
+      track.classList.remove('ready');
+    };
+    const begin = (ev) => {
+      dragging = true;
+      max = Math.max(1, track.clientWidth - knob.offsetWidth - 8);
+      startX = ev.clientX;
+      knob.style.transition = 'none';
+      try { knob.setPointerCapture(ev.pointerId); } catch (e) { /* noop */ }
+      ev.preventDefault();
+    };
+    const move = (ev) => {
+      if (!dragging) return;
+      const x = setPos(ev.clientX - startX);
+      if (max > 0 && x >= max - 1) {
+        dragging = false;
+        dismissAlarm();
+      }
+    };
+    const end = () => {
+      if (!dragging) return;
+      dragging = false;
+      const moved = track.getAttribute('aria-valuenow');
+      if (Number(moved) >= 82) dismissAlarm();
+      else reset();
+    };
+
+    knob.addEventListener('pointerdown', begin);
+    track.addEventListener('pointerdown', (ev) => {
+      if (ev.target === knob) return;
+      // 트랙을 직접 누른 경우에도 그 지점부터 끌 수 있다
+      max = Math.max(1, track.clientWidth - knob.offsetWidth - 8);
+      const rect = track.getBoundingClientRect();
+      const x = Math.max(0, Math.min(max, ev.clientX - rect.left - knob.offsetWidth / 2));
+      setPos(x);
+      if (x >= max - 1) { dismissAlarm(); return; }
+      begin(ev);
+      setPos(x);
+    });
+    knob.addEventListener('pointermove', move);
+    track.addEventListener('pointermove', move);
+    knob.addEventListener('pointerup', end);
+    knob.addEventListener('pointercancel', end);
+    track.addEventListener('pointerup', end);
+    track.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter' || ev.key === ' ' || ev.key === 'ArrowRight') {
+        ev.preventDefault();
+        dismissAlarm();
+      }
+    });
+  }
+
   /* -------------------------------------------------- 초기화 */
   function bindEvents() {
     $('#login-form').addEventListener('submit', (ev) => {
@@ -899,6 +1378,8 @@
     }));
     $('#btn-refresh').addEventListener('click', refreshAll);
     $('#btn-test-fall').addEventListener('click', runTestFall);
+    const alarmBtn = $('#btn-alarm-demo');
+    if (alarmBtn) alarmBtn.addEventListener('click', openAlarmDemo);
     $('#btn-demo-reset').addEventListener('click', resetDemo);
     $('#btn-logout').addEventListener('click', async () => {
       try { await request('/auth/logout', { method: 'POST', body: {} }); } catch (e) { /* noop */ }

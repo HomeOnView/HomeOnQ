@@ -83,7 +83,8 @@ def ensure_senior(db: Session, guardian: Guardian) -> Senior:
             height_cm=160.0,
             weight_kg=52.0,
             medical_conditions=["당뇨", "고혈압", "척추측만증"],
-            photo_url="https://images.unsplash.com/photo-1581579438747-1dc8d1e05d0e?w=400",
+            # 프로필 사진은 웹앱에 포함된 픽셀화 이미지(webapp/assets/senior-profile.jpg)를 쓴다.
+            photo_url=None,
             emergency_contact="010-0000-0000",
             memo="분당 자택 거실 카메라(Tapo C225)로 관찰 중",
             is_active=True,

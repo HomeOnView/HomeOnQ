@@ -117,7 +117,7 @@ async function main() {
   await wait(400);
   check(!doc.querySelector('#screen-home').classList.contains('hidden'), '로그인 후 리포트 화면');
   check(doc.querySelector('#profile-card').textContent.includes('강O순'), '프로필 카드 렌더');
-  check(doc.querySelector('#report-card').textContent.includes('살펴봐'), 'AI 리포트 문장 렌더');
+  check(doc.querySelector('#report-card') === null, '홈 탭의 긴 AI 리포트 카드 제거');
   check(doc.querySelectorAll('#summary-card .summary-row').length === 4, '주요 이벤트 요약 4행');
   check(doc.querySelectorAll('#event-list .event-item').length === 2, '이벤트 목록 렌더');
   check(doc.querySelector('#home-alert-card').textContent.includes('낙상'), '미확인 알림 카드');
@@ -138,6 +138,10 @@ async function main() {
   doc.querySelector('#tabbar button[data-view="events"]').click();
   await wait(80);
   check(!doc.querySelector('#screen-events').classList.contains('hidden'), '이벤트 탭 전환');
+  check(doc.querySelector('#btn-alarm-demo') !== null, '이벤트 상단 알람 버튼');
+  const summaryText = doc.querySelector('#event-summary-card').textContent;
+  check(doc.querySelectorAll('#event-summary-card .es-line').length === 3, '이벤트 하단 3줄 요약');
+  check(summaryText.includes('70점') && summaryText.includes('낙상'), '요약에 점수·낙상 포인트', summaryText.replace(/\s+/g, ' ').slice(0, 70));
   doc.querySelector('#event-filter button[data-kind="fall"]').click();
   await wait(60);
   check(doc.querySelectorAll('#event-list .event-item').length === 1, '낙상 필터 적용');
@@ -161,6 +165,24 @@ async function main() {
   doc.querySelector('#tabbar button[data-view="settings"]').click();
   await wait(80);
   check(doc.querySelector('#settings-server').textContent.includes('0.3.0'), '설정에 서버 버전 표시');
+  const hero = doc.querySelector('#settings-profile');
+  check(hero !== null && hero.textContent.includes('어르신 프로필'), '설정 탭 프로필 영역');
+  check(!!hero.querySelector('img.avatar-round') && hero.querySelector('img.avatar-round').getAttribute('src').includes('senior-profile.jpg'), '픽셀화 프로필 사진 노출');
+
+  // 3단계 알람 모달
+  doc.querySelector('#tabbar button[data-view="events"]').click();
+  await wait(60);
+  doc.querySelector('#btn-alarm-demo').click();
+  await wait(120);
+  check(doc.querySelector('.alarm-sheet') !== null, '3단계 알람 설정 모달');
+  check(doc.querySelectorAll('.alarm-steps li').length === 3, '3단계 스텝 표시');
+  check(!!doc.querySelector('#alarm-start') && !!doc.querySelector('#alarm-wait'), '대기 시간·시작 버튼');
+  doc.querySelector('#alarm-start').click();
+  await wait(1100);
+  check(doc.querySelector('#alarm-count') !== null, '1단계 카운트다운 진행');
+  doc.querySelector('.modal-backdrop').click();
+  await wait(60);
+  check(doc.querySelector('.alarm-sheet') === null, '알람 모달 닫힘');
 
   check(errors.length === 0, '런타임 오류 없음', errors.slice(0, 2).join(' | '));
 
