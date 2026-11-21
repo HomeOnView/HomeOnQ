@@ -96,8 +96,8 @@ body { display: flex; align-items: center; justify-content: center; }
 }
 .brand-text { display: flex; flex-direction: column; line-height: 1.15; min-width: 0; overflow: hidden; }
 .brand-text strong { font-size: 15px; letter-spacing: .01em; white-space: nowrap; }
-.brand-text span { font-size: 11px; color: #a9bbdd; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.appbar-actions { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
+.brand-text span { font-size: 10px; letter-spacing: -.01em; color: #a9bbdd; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.appbar-actions { display: flex; align-items: center; gap: 5px; flex: 0 0 auto; }
 .icon-btn {
   border: 1px solid rgba(255, 255, 255, .18);
   background: rgba(255, 255, 255, .08);
