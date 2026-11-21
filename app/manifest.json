@@ -1,0 +1,16 @@
+{
+  "name": "HOMEONQ · 보호자 안심 리포트",
+  "short_name": "HOMEONQ",
+  "description": "시연용 HOMEONQ 보호자 안심 리포트 웹앱 (브라우저 내장 데모 엔진으로 동작)",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0B1F4B",
+  "theme_color": "#0B1F4B",
+  "lang": "ko",
+  "icons": [
+    { "src": "./icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "./icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
