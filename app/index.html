@@ -78,8 +78,6 @@
 
         <article class="card score-card" id="score-card"></article>
 
-        <article class="card report-card" id="report-card"></article>
-
         <article class="card summary-card" id="summary-card"></article>
 
         <article class="card alert-card hidden" id="home-alert-card"></article>
@@ -107,7 +105,21 @@
             <button data-kind="behavior">행동</button>
           </div>
         </div>
+
+        <!-- 낙상 3단계 알람 설정·테스트 -->
+        <button class="alarm-cta" id="btn-alarm-demo" type="button">
+          <span class="alarm-cta-icon" aria-hidden="true">🔔</span>
+          <span class="alarm-cta-text">
+            <strong>낙상 3단계 알람 설정 / 테스트</strong>
+            <span>3분 무움직임 → 보호자 알림 → 앱 알람 → 자동 전화</span>
+          </span>
+          <span class="alarm-cta-go" aria-hidden="true">›</span>
+        </button>
+
         <div id="event-list" class="event-list"></div>
+
+        <!-- 최근 상태 2~3줄 요약 -->
+        <article class="card event-summary" id="event-summary-card"></article>
       </section>
 
       <!-- 시뮬레이션 -->
@@ -133,6 +145,7 @@
       <!-- 설정 -->
       <section class="screen hidden" id="screen-settings">
         <div class="section-head"><h2>설정</h2></div>
+        <article class="card profile-hero" id="settings-profile"></article>
         <article class="card" id="settings-account"></article>
         <article class="card" id="settings-devices"></article>
         <article class="card" id="settings-server"></article>
