@@ -94,16 +94,17 @@ body { display: flex; align-items: center; justify-content: center; }
   color: var(--gold);
   border: 1px solid rgba(227, 166, 47, .35);
 }
-.brand-text { display: flex; flex-direction: column; line-height: 1.15; min-width: 0; }
-.brand-text strong { font-size: 15px; letter-spacing: .01em; }
-.brand-text span { font-size: 11px; color: #a9bbdd; }
-.appbar-actions { display: flex; align-items: center; gap: 6px; }
+.brand-text { display: flex; flex-direction: column; line-height: 1.15; min-width: 0; overflow: hidden; }
+.brand-text strong { font-size: 15px; letter-spacing: .01em; white-space: nowrap; }
+.brand-text span { font-size: 11px; color: #a9bbdd; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.appbar-actions { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
 .icon-btn {
   border: 1px solid rgba(255, 255, 255, .18);
   background: rgba(255, 255, 255, .08);
   color: #fff; font-size: 11px; font-weight: 700;
   padding: 6px 9px; border-radius: 9px; cursor: pointer;
   font-family: inherit;
+  white-space: nowrap;
 }
 .icon-btn.ghost { background: transparent; padding: 6px 7px; }
 .icon-btn:active { transform: scale(.96); }
@@ -113,6 +114,7 @@ body { display: flex; align-items: center; justify-content: center; }
   background: rgba(255, 255, 255, .07);
   border: 1px solid rgba(255, 255, 255, .12);
   padding: 4px 8px; border-radius: 99px;
+  white-space: nowrap;
 }
 .conn-badge i { width: 7px; height: 7px; border-radius: 50%; background: #7d8aa6; }
 .conn-badge.online i { background: #39c07a; box-shadow: 0 0 0 3px rgba(57, 192, 122, .18); }

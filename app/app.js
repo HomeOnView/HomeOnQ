@@ -712,7 +712,7 @@
       '<div class="sheet" role="dialog" aria-modal="true">' +
         '<div class="sheet-handle"></div>' +
         '<h2>어르신 프로필 수정</h2>' +
-        '<p class="sheet-sub">수정한 내용은 서버에 저장되고 리포트 카드에 바로 반영됩니다.</p>' +
+        '<p class="sheet-sub">수정한 내용은 저장되고 리포트 카드에 바로 반영됩니다.</p>' +
         '<form id="profile-form" class="form-grid">' +
           '<label class="field span2"><span>성함</span><input name="display_name" value="' + esc(s.display_name || '') + '" required /></label>' +
           '<label class="field"><span>생년월일</span><input name="birth_date" type="date" value="' + esc(s.birth_date || '') + '" /></label>' +
