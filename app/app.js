@@ -945,9 +945,9 @@
   };
 
   const ALARM_STEPS = [
-    { n: 1, title: '보호자 1차 알림', sub: '낙상 후 3분 무움직임' },
-    { n: 2, title: '어르신 앱 알람', sub: '소리·진동 · 밀어서 끄기' },
-    { n: 3, title: '보호자 자동 전화', sub: '미응답 시 원터치 연결' },
+    { n: 1, title: '보호자 1차 알림', sub: '낙상 3분 무움직임' },
+    { n: 2, title: '어르신 앱 알람', sub: '소리·진동 알람' },
+    { n: 3, title: '보호자 자동 전화', sub: '원터치 연결' },
   ];
 
   function alarmStepsHtml(stage) {
@@ -1061,7 +1061,8 @@
 
   function alarmSetupHtml() {
     return '<div class="alarm-setup">' +
-      '<div class="alarm-basis"><b>실제 서비스 기준</b>낙상 후 <b>3분(180초)</b> 무움직임 → 보호자 1차 알림 · 어르신 알람 <b>1분</b> 미응답 → 보호자 자동 전화</div>' +
+      '<div class="alarm-basis"><b class="basis-tag">실제 서비스 기준</b>' +
+        '<span>낙상 후 <b>3분(180초)</b> 무움직임 → 보호자 1차 알림 · 어르신 알람 <b>1분</b> 미응답 → 보호자 자동 전화</span></div>' +
       '<div class="form-grid">' +
         '<label class="field"><span>1단계 대기 시간</span>' +
           '<select id="alarm-wait">' +

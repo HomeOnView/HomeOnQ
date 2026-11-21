@@ -517,6 +517,7 @@ body { display: flex; align-items: center; justify-content: center; }
   padding: 12px 14px; font-size: 12.5px; line-height: 1.65; color: #3d4c6b;
 }
 .alarm-basis b { color: var(--navy); }
+.alarm-basis .basis-tag { display: block; margin-bottom: 3px; }
 .alarm-note { margin: 0; font-size: 12px; color: #8b98b1; line-height: 1.6; text-align: center; }
 .alarm-title { margin: 0; font-size: 18px; color: var(--navy); text-align: center; line-height: 1.4; }
 .alarm-title b { color: #b42318; }
