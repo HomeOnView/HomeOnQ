@@ -945,6 +945,7 @@
     left: 0,
     phone: '010-0000-0000',
     calling: false,
+    canceled: false,
     soundOn: true,
     timers: [],
     tick: null,
@@ -1022,6 +1023,7 @@
     stopSiren();
     ALARM.stage = 0;
     ALARM.calling = false;
+    ALARM.canceled = false;
     ALARM.root = null;
   }
 
@@ -1148,12 +1150,13 @@
   }
 
   function alarmDoneHtml() {
+    const canceled = ALARM.canceled;
     return '<div class="alarm-panel">' +
       '<div class="alarm-bell alarm-bell-ok">✓</div>' +
-      '<p class="alarm-title">알람을 껐습니다</p>' +
+      '<p class="alarm-title">' + (canceled ? '자동 연결을 취소했습니다' : '알람을 껐습니다') + '</p>' +
       '<p class="alarm-sub">보호자에게 <b>안심 응답</b>을 보냈습니다. 3단계 자동 전화는 진행되지 않습니다.</p>' +
       '<div class="alarm-log">' +
-        '<div class="ok">✓ 어르신이 밀어서 알람을 껐습니다</div>' +
+        '<div class="ok">' + (canceled ? '✓ 보호자 자동 연결 취소' : '✓ 어르신이 밀어서 알람을 껐습니다') + '</div>' +
         '<div class="ok">✓ 보호자에게 안심 응답 전송</div>' +
       '</div>' +
       '<button class="btn navy block" id="alarm-retry" type="button">다시 시연하기</button>' +
@@ -1278,6 +1281,7 @@
     if (ALARM.stage !== 2) return;
     alarmClearTimers();
     stopSiren();
+    ALARM.canceled = false;
     ALARM.stage = 4;
     renderAlarmBody();
     toast('알람을 껐습니다. 보호자에게 안심 응답을 보냈습니다.');
