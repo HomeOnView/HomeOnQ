@@ -60,10 +60,10 @@ import platform
 print("Python", platform.python_version(), "|", platform.platform())"""),
     ("markdown", "## 0-2. 저장소 받기 (app-demo 브랜치)\n\n이미 코드가 있으면 이 셀은 건너뛰세요."),
     ("code", """import os, pathlib, subprocess
-if not pathlib.Path("HomeOnQ/camera-analysis").exists():
+if not pathlib.Path("HOMEONQ/camera-analysis").exists():
     subprocess.run(["git", "clone", "--depth", "1", "-b", "app-demo",
-                    "https://github.com/HomeOnView/HomeOnQ.git"], check=False)
-os.chdir("HomeOnQ/camera-analysis")
+                    "https://github.com/HomeOnView/HOMEONQ.git"], check=False)
+os.chdir("HOMEONQ/camera-analysis")
 print("현재 위치:", os.getcwd())"""),
     ("markdown", "## 0-3. 학습 패키지 설치\n\nMediaPipe(관절 추출) + ONNX(내보내기/추론) + 테스트 도구를 설치합니다."),
     ("code", RUN_HELPER + """
