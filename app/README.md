@@ -1,6 +1,6 @@
 # HOMEONQ 테스트 웹앱 (GitHub Pages 정적 배포)
 
-- 주소: <https://homeonview.github.io/HomeOnQ/app/>
+- 주소: <https://homeonview.github.io/HOMEONQ/app/>
 - 기존 소개 랜딩페이지(`/index.html`)는 건드리지 않고, `app/` 폴더만 정적 웹앱으로 배포한다.
 - 아이폰 Safari에서 열고 **공유 → 홈 화면에 추가**를 하면 브라우저 바 없이 앱처럼 실행된다.
 
