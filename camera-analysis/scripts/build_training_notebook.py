@@ -62,7 +62,7 @@ print("Python", platform.python_version(), "|", platform.platform())"""),
     ("code", """import os, pathlib, subprocess
 if not pathlib.Path("HOMEONQ/camera-analysis").exists():
     subprocess.run(["git", "clone", "--depth", "1", "-b", "app-demo",
-                    "https://github.com/HomeOnView/HOMEONQ.git"], check=False)
+                    "https://github.com/TOTALONQ/HOMEONQ.git"], check=False)
 os.chdir("HOMEONQ/camera-analysis")
 print("현재 위치:", os.getcwd())"""),
     ("markdown", "## 0-3. 학습 패키지 설치\n\nMediaPipe(관절 추출) + ONNX(내보내기/추론) + 테스트 도구를 설치합니다."),

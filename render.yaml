@@ -1,6 +1,6 @@
 # HOMEONQ 통합 시연앱 — Render 무료 웹 서비스 배포 정의
 #
-# 사용법: Render Dashboard → New → Blueprint → 저장소 HomeOnView/HOMEONQ 선택
+# 사용법: Render Dashboard → New → Blueprint → 저장소 TOTALONQ/HOMEONQ 선택
 #         → 브랜치 app-demo 선택 → Apply. 아래 설정이 그대로 적용된다.
 #
 # 이 서비스는 웹앱(/)·API(/api/v1)·자세분석 시뮬레이션(/demo/*)을 한 프로세스에서 서빙한다.

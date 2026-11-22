@@ -277,12 +277,12 @@ E2E 스크립트는 임시 SQLite에 마이그레이션·시드를 적용하고 
 
 ### 배포 3단계
 
-1. <https://render.com> 가입 → GitHub 계정 연결 (GitHub App 설치에서 `HomeOnView/HOMEONQ` 접근 허용)
-2. Dashboard → **New → Blueprint** → 저장소 `HomeOnView/HOMEONQ`, 브랜치 **`app-demo`** 선택
+1. <https://render.com> 가입 → GitHub 계정 연결 (GitHub App 설치에서 `TOTALONQ/HOMEONQ` 접근 허용)
+2. Dashboard → **New → Blueprint** → 저장소 `TOTALONQ/HOMEONQ`, 브랜치 **`app-demo`** 선택
 3. **Apply** → 첫 배포 3~5분 → `https://homeonq.onrender.com` (이미 사용 중인 이름이면 뒤에 임의 문자열이 붙습니다)
 
 > 저장소 이름은 `HOMEONQ`(전부 대문자)이며, 이전 이름 `HomeOnQ`의 리포 URL은 GitHub이 새 주소로 리다이렉트합니다.
-> GitHub Pages 주소는 `https://homeonview.github.io/HOMEONQ/`(`main`의 `index.html`), 웹앱은 `https://homeonview.github.io/HOMEONQ/app/` 입니다. 리네임 이전 주소(`/HomeOnQ/`, `/HomeOnQ/app/`)로 들어온 링크는 새 주소로 자동 연결됩니다.
+> GitHub Pages 주소는 `https://totalonq.github.io/HOMEONQ/`(`main`의 `index.html`), 웹앱은 `https://totalonq.github.io/HOMEONQ/app/` 입니다. GitHub 계정명이 `HomeOnView` → `TOTALONQ`로 바뀌면서 이전 주소(`homeonview.github.io/HOMEONQ/...`)는 더 이상 열리지 않으니(404), 외부에 공유한 링크는 새 주소로 바꿔 주세요.
 
 > Render가 서비스 이름에 소문자만 허용한다고 안내하면 `render.yaml`의 `name`을 `homeonq`로 바꿔 다시 Apply 하세요. 화면 표기는 HOMEONQ 그대로입니다.
 
