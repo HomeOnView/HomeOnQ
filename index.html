@@ -30,13 +30,14 @@ header{position:fixed;z-index:50;inset:0 0 auto;height:var(--header);background:
 .hero-cta:hover{background:rgba(121,233,244,.24);transform:translateY(-1px)}
 .hero-video{grid-area:video;min-width:0;overflow:hidden;border:1px solid rgba(190,241,246,.24);border-radius:18px;background:linear-gradient(180deg,rgba(9,22,34,.84),rgba(4,12,20,.76));box-shadow:0 34px 80px -34px #000d;backdrop-filter:blur(12px)}
 .video-tabs{display:flex;gap:6px;padding:8px;border-bottom:1px solid rgba(190,241,246,.14)}
-.video-tab{flex:1 1 0;min-width:0;display:flex;align-items:center;justify-content:center;gap:7px;padding:9px 8px;border:0;border-radius:10px;background:transparent;color:#bfd4dd;font-size:.74rem;font-weight:700;letter-spacing:.01em;line-height:1.32;text-align:center;transition:background .25s,color .25s,box-shadow .25s}
+.video-tab{flex:1 1 0;min-width:0;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 8px;border:0;border-radius:10px;background:transparent;color:#bfd4dd;font-size:.7rem;font-weight:700;letter-spacing:0;line-height:1.32;text-align:center;transition:background .25s,color .25s,box-shadow .25s}
+.video-tab .lbl{min-width:0}
 .video-tab .num{color:var(--cyan);font-size:.8rem;line-height:1}
 .video-tab:hover{background:rgba(121,233,244,.1);color:#fff}
 .video-tab[aria-selected="true"]{background:rgba(121,233,244,.17);color:#f0feff;box-shadow:inset 0 0 0 1px rgba(121,233,244,.5)}
 .video-frame{position:relative;aspect-ratio:16/9;background:#030a11}
 .video-frame iframe{display:block;position:absolute;inset:0;width:100%;height:100%;border:0}
-@media(max-width:1080px){.hero-copy h1{font-size:clamp(2.6rem,5vw,3.6rem)}.video-tab{font-size:.66rem;gap:5px}}
+@media(max-width:1080px){.hero-copy h1{font-size:clamp(2.6rem,5vw,3.6rem)}.video-tab{font-size:.67rem;gap:5px}}
 @media(max-width:900px){.hero{align-items:flex-end}.hero-layout{grid-template-columns:1fr;grid-template-areas:"copy" "video" "actions";row-gap:22px;align-items:start}.hero-content{padding:calc(var(--header) + 62px) 0 74px}.hero-copy h1{font-size:clamp(3.2rem,11vw,5rem)}.hero-video{border-radius:14px}.video-tabs{padding:6px;gap:4px}.video-tab{font-size:.68rem;padding:8px 6px}}
 @media(max-width:480px){.video-tab{flex-direction:column;gap:3px;font-size:.64rem;padding:7px 4px}.video-tab .num{font-size:.74rem}}
 </style></head><body><a class="skip" href="#main">본문으로 바로가기</a><header><div class="wrap header-inner"><a class="logo" href="#home"><span class="logo-dot" aria-hidden="true"></span>HOMEONQ</a><button class="menu-toggle" type="button" aria-label="메뉴 열기" aria-controls="nav" aria-expanded="false"><span></span><span></span></button><nav id="nav" aria-label="주요 메뉴"><a href="#home">HOME</a><a href="#about">ABOUT</a><a href="#technology">TECHNOLOGY</a><a href="#contact">CONTACT</a></nav></div></header><main id="main">
